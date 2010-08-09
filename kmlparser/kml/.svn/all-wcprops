@@ -1,0 +1,239 @@
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/174/trunk/src/com/google/maps/extras/xmlparsers/kml
+END
+Document.as
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/90/trunk/src/com/google/maps/extras/xmlparsers/kml/Document.as
+END
+AbstractLink.as
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/AbstractLink.as
+END
+Container.as
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/Container.as
+END
+AbstractLatLonBox.as
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/AbstractLatLonBox.as
+END
+Kml22.as
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/Kml22.as
+END
+Icon.as
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/Icon.as
+END
+LinearRing.as
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/LinearRing.as
+END
+Feature.as
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/97/trunk/src/com/google/maps/extras/xmlparsers/kml/Feature.as
+END
+Pair.as
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/Pair.as
+END
+Geometry.as
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/Geometry.as
+END
+ListStyle.as
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/ListStyle.as
+END
+KmlPoint.as
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/KmlPoint.as
+END
+OuterBoundaryIs.as
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/OuterBoundaryIs.as
+END
+ColorStyle.as
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/ColorStyle.as
+END
+Style.as
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/Style.as
+END
+StyleSelector.as
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/!svn/ver/59/trunk/src/com/google/maps/extras/xmlparsers/kml/StyleSelector.as
+END
+KmlGroundOverlay.as
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/KmlGroundOverlay.as
+END
+MultiGeometry.as
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/!svn/ver/97/trunk/src/com/google/maps/extras/xmlparsers/kml/MultiGeometry.as
+END
+BalloonStyle.as
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/BalloonStyle.as
+END
+LineStyle.as
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/LineStyle.as
+END
+IconStyle.as
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/IconStyle.as
+END
+Data.as
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/113/trunk/src/com/google/maps/extras/xmlparsers/kml/Data.as
+END
+KmlObject.as
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/KmlObject.as
+END
+Folder.as
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/174/trunk/src/com/google/maps/extras/xmlparsers/kml/Folder.as
+END
+LineString.as
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/LineString.as
+END
+Overlay.as
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/Overlay.as
+END
+ExtendedData.as
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/!svn/ver/113/trunk/src/com/google/maps/extras/xmlparsers/kml/ExtendedData.as
+END
+KmlPolygon.as
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/KmlPolygon.as
+END
+BoundaryCommon.as
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/BoundaryCommon.as
+END
+Link.as
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/Link.as
+END
+StyleMap.as
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/StyleMap.as
+END
+Placemark.as
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/113/trunk/src/com/google/maps/extras/xmlparsers/kml/Placemark.as
+END
+HotSpot.as
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/HotSpot.as
+END
+LabelStyle.as
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/LabelStyle.as
+END
+LatLonBox.as
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/LatLonBox.as
+END
+PolyStyle.as
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/PolyStyle.as
+END
+ItemIcon.as
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/60/trunk/src/com/google/maps/extras/xmlparsers/kml/ItemIcon.as
+END
+Coordinates.as
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/92/trunk/src/com/google/maps/extras/xmlparsers/kml/Coordinates.as
+END
+InnerBoundaryIs.as
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/!svn/ver/4/trunk/src/com/google/maps/extras/xmlparsers/kml/InnerBoundaryIs.as
+END

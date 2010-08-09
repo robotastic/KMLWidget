@@ -1,0 +1,1073 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+////////////////////////////////////////////////////////////////////////////////
+//
+// Copyright © 2008 ESRI
+//
+// All rights reserved under the copyright laws of the United States.
+// You may freely redistribute and use this software, with or
+// without modification, provided you include the original copyright
+// and use restrictions.  See use restrictions in the file:
+// <install location>/FlexViewer/License.txt
+//
+////////////////////////////////////////////////////////////////////////////////
+-->
+<BaseWidget xmlns				="com.esri.solutions.flexviewer.*" 
+			xmlns:esri			="http://www.esri.com/2008/ags" 
+			xmlns:mx			="http://www.adobe.com/2006/mxml" 
+			xmlns:mxeffects		="com.adobe.ac.mxeffects.*" 
+			xmlns:widgets		="com.esri.solutions.flexviewer.widgets.*"
+			x					="600" 
+			y					="300" 
+			widgetConfigLoaded	="init()">
+	
+	
+	<mx:Script>
+		<![CDATA[
+			import com.esri.ags.Graphic;
+			import com.esri.ags.Map;
+			import com.esri.ags.SpatialReference;
+			import com.esri.ags.geometry.Extent;
+			import com.esri.ags.geometry.Geometry;
+			import com.esri.ags.geometry.MapPoint;
+			import com.esri.ags.geometry.Polygon;
+			import com.esri.ags.geometry.Polyline;
+			import com.esri.ags.layers.GraphicsLayer;
+			import com.esri.ags.layers.Layer;
+			import com.esri.ags.symbol.PictureMarkerSymbol;
+			import com.esri.ags.symbol.SimpleFillSymbol;
+			import com.esri.ags.symbol.SimpleLineSymbol;
+			import com.esri.ags.symbol.Symbol;
+			import com.esri.ags.utils.WebMercatorUtil;
+			import com.esri.solutions.flexviewer.SiteContainer;
+			import com.esri.solutions.flexviewer.utils.GeoRSSUtil;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.KMLTreeItemRenderer;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.KmzFile;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.Namespaces;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.kml.Container;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.kml.Document;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.kml.Feature;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.kml.Kml22;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.kml.NetworkLink;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.kml.Placemark;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.kml.Style;
+			import com.esri.solutions.flexviewer.widgets.kmlparser.kml.StyleMap;
+			import com.esri.solutions.flexviewer.widgets.zip.ZipError;
+			import com.esri.solutions.flexviewer.widgets.zip.ZipFile;
+			import com.esri.solutions.flexviewer.widgets.zip.ZipOutput;
+			
+			import flash.net.URLRequest;
+			import flash.net.URLStream;
+			
+			import mx.collections.*;
+			import mx.controls.Alert;
+			import mx.events.ListEvent;
+			import mx.messaging.management.Attribute;
+			import mx.rpc.AsyncResponder;
+			import mx.rpc.events.ResultEvent;
+			import mx.utils.Base64Decoder;
+			
+			//labels
+			private var loadingLabel:String;
+			
+			private var querySource:String;
+			
+			private var queryExpr:String;
+			
+			private var queryFields:String;
+			
+			private var queryTitleField:String;
+			
+			private var queryLinkField:String;
+			
+			private var queryRefreshRate:String;
+			
+			private var zoomScale:Number = 5000;
+			
+			private var proxyUrl:String;
+			
+			private var symbols:XML = null;
+			
+			private var graphicsLayer:GraphicsLayer;
+			
+			private var graphicPointSym:PictureMarkerSymbol;
+			
+			private var graphicLineSym:SimpleLineSymbol = new SimpleLineSymbol("solid", 0xFF0000, 0.8, 2);
+			
+			private var graphicPolySym:SimpleFillSymbol = new SimpleFillSymbol("solid", 0xFF0000, 0.5, graphicLineSym);
+			
+			private var timer:Timer;
+			
+			private var styles:Array; 
+			
+			private var styleMaps:Array;
+			
+			private var networkLinks:ArrayCollection = new ArrayCollection();
+			
+			private var featureRecords:ArrayCollection = new ArrayCollection();
+			
+			private var icon_image:Image = new Image();
+			
+			private var icons:Array = new Array();
+			
+			
+			
+			private var kmzFile:KmzFile;
+			
+			[Bindable]
+			private var msgVisible:Boolean = false;
+			
+			[Bindable]
+			private var srcVisible:Boolean = false;
+			
+			private var rsstype:String = "";
+			
+			private var hitimer:uint;
+						
+			
+        	private static const RE:RegExp = /M[ ](?P<mag>[^,]+),\.*/;
+			
+			private var urlLdr:URLLoader;
+			
+			private var lastCenter:MapPoint;
+        	
+			private function init():void
+			{
+				graphicPointSym = new PictureMarkerSymbol(widgetIcon, 30, 30)
+				graphicsLayer = new GraphicsLayer();
+				graphicsLayer.symbol = graphicPointSym;
+				map.addLayer(graphicsLayer);
+				if ((configData) && (configData.proxy != ""))
+				{
+					proxyUrl = configData.proxy;	
+				}
+				if (configXML)
+				{
+					//labels
+					loadingLabel = configXML.labels.loadinglabel || "Loading feed...";
+					
+					querySource = configXML.source;
+					queryExpr = configXML.query;
+					queryFields = configXML.fields;
+					queryTitleField = configXML.titlefield;
+					queryLinkField = configXML.linkfield;
+					queryRefreshRate = configXML.refreshrate;
+					
+					wTree.addEventListener("visible", changeVisibility);
+
+					
+					if (Number(configXML.zoomscale) > 0)
+						zoomScale = Number(configXML.zoomscale);
+					
+					
+					if (querySource != "")
+					{
+						var urlReq:URLRequest = new URLRequest(configXML.source);
+						var urlStream:URLStream = new URLStream();
+						
+						urlStream.addEventListener(Event.COMPLETE, loadXML);
+						urlStream.load(urlReq);
+						showMessage(loadingLabel, true);
+					}
+					else
+					{
+						srcVisible = true;	
+					}
+					
+				}
+				
+				
+			}	
+			
+			private function loadKmlSrc(event:Event):void
+			{
+				loadingLabel = "Loading feed...";
+				
+				if (proxyUrl)
+				{
+					
+				querySource = formUrlWithProxy(kmlSrc.text);
+				queryTitleField = "KML feed";
+				wTree.addEventListener("visible", changeVisibility);
+			
+				var urlReq:URLRequest = new URLRequest(querySource);
+				var urlStream:URLStream = new URLStream();
+				
+				urlStream.addEventListener(Event.COMPLETE, loadXML);
+				urlStream.load(urlReq);
+				showMessage(loadingLabel, true);
+				srcVisible = false;
+				}
+				else
+				{
+					showMessage("Proxy error!", true);
+				}
+				
+				
+			}
+			
+			//start widget timer
+			private function startWidgetTimer():void
+			{
+				if (queryRefreshRate)
+				{
+					var seconds:Number = Number(queryRefreshRate);
+					var rate:Number = seconds * 1000;
+					stopWidgetTimer();
+					timer = new Timer(rate);
+					timer.addEventListener(TimerEvent.TIMER,timerTick);
+					timer.start();
+				}
+			}			
+			
+			//stop widget timer
+			private function stopWidgetTimer():void
+			{
+				if (timer != null)
+				{
+					if (timer.running)
+						timer.stop();
+				}
+			}			
+			
+			//timer tick
+			private function timerTick(evt:TimerEvent):void
+			{
+				queryKMLData();
+			}			
+			
+			//query rss data
+			private function queryKMLData():void
+			{
+				if (querySource)
+				{
+					
+					/*kmlService.url = querySource;
+
+					kmlService.send();*/
+					showMessage(loadingLabel, true);    
+				}  
+			}			
+			
+			//fault handler
+			private function faultHandler(event:mx.rpc.events.FaultEvent):void
+			{
+				var sInfo:String = "Error: ";
+				sInfo += "Event Target: " + event.target + "\n\n";
+				sInfo += "Event Type: " + event.type + "\n\n";
+				sInfo += "Fault Code: " + event.fault.faultCode + "\n\n";
+				sInfo += "Fault Info: " + event.fault.faultString;
+				Alert.show(sInfo);
+			}			
+			
+			
+			
+			public function loadXML(event:Event):void { 
+					
+					var data:URLStream = URLStream(event.target);
+					var buf:ByteArray = new ByteArray();
+					var kml:Kml22;
+					
+					buf.endian = Endian.LITTLE_ENDIAN;
+					data.readBytes(buf);
+					
+					try
+					{
+						
+					this.kmzFile = new KmzFile(buf);	
+					var ba:ByteArray = new ByteArray();
+					
+					
+					var i:int;
+					if (kmzFile.fileNum == 1)
+					{
+						ba = kmzFile.GetFile(".kml");
+					}
+					else
+					{
+						ba = kmzFile.GetFile("doc.kml");
+					}
+					kml = new Kml22(ba.toString());
+				}
+					catch (error:ZipError)
+					{
+						buf.position = 0;
+						kml = new Kml22(buf.readUTFBytes(buf.bytesAvailable) );
+						trace(error.message);
+						//showMessage("A problem occured while parsing the KMZ feed. " + error.message, false);
+					}	
+					
+					try 
+					{
+				
+				var rootFeature:Feature = kml.feature;
+				var ac:ArrayCollection;
+				
+				/*if (rootFeature is Document)
+				{
+					styles = new ArrayCollection(Document(rootFeature).styles);
+				
+				}*/
+					
+				
+				// @todo: This is redundant with code in getChildrenFeatures, should combine
+				// @todo: This is redundant with code in getChildrenFeatures, should combine
+
+				/*
+				if (canContainFeatures(rootFeature)) {
+					//kmlObj.children = getChildrenFeatures(Container(rootFeature));
+					ac  = new ArrayCollection(getChildrenFeatures(Container(rootFeature)));
+				} else {
+					//associateWithMapObject(kmlObj, rootFeature);
+					var kmlObj:Object = new Object();
+					kmlObj.name = rootFeature.name;
+					kmlObj.description = rootFeature.description
+					if (rootFeature is Placemark) {
+						var placemark:Placemark = Placemark(rootFeature)
+						kmlObj.geometry = placemark.geometry;
+					}
+					//kmlObj.bounds = new LatLngBounds();
+					ac  = new ArrayCollection();
+					ac.addItem(kmlObj);
+				}
+				*/
+				
+				featureRecords = createFeatureData(Container(rootFeature));//createRecordData(ac);
+				this.addSharedData(widgetTitle, featureRecords);
+				wTree.dataProvider = featureRecords;
+				clearMessage();
+				
+				var link:NetworkLink;
+				
+				for each (link in networkLinks)
+				{
+					if (proxyUrl)
+					{
+						var urlReq:URLRequest = new URLRequest(formUrlWithProxy( link.url.href));
+						var urlStream:URLStream = new URLStream();
+						
+						urlStream.addEventListener(Event.COMPLETE, loadNetworkLink);
+						urlStream.load(urlReq);
+						showMessage("Loading NetworkLink...", true);
+					}
+				}
+				
+				
+				}
+				catch (error:Error)
+				{
+					showMessage("A problem occured while parsing the KML feed. " + error.message, false);
+				}
+			}
+			
+			
+			public function loadNetworkLink(event:Event):void { 
+				
+				var data:URLStream = URLStream(event.target);
+				var buf:ByteArray = new ByteArray();
+				var kml:Kml22;
+				
+				
+				
+				buf.endian = Endian.LITTLE_ENDIAN;
+				data.readBytes(buf);
+				
+				try
+				{
+					var zipFile:ZipFile = new ZipFile(buf);
+					var files:Array = zipFile.entries;
+					var ba:ByteArray = new ByteArray();
+					
+					var i:int;
+					if (files.length == 1)
+					{
+						if (files[0].name.search(".kml") >= 0)
+						{
+							ba = zipFile.getInput(files[0]);
+							
+						}	
+					}
+					else
+					{
+						for (i = 0; i < files.length; i++) 
+						{
+							if (files[i].name.search("doc.kml") >= 0)
+							{
+								ba = zipFile.getInput(files[i]);
+								break;
+							}
+						}
+					}
+					kml = new Kml22(ba.toString());
+				}
+				catch (error:ZipError)
+				{
+					buf.position = 0;
+					kml = new Kml22(buf.readUTFBytes(buf.bytesAvailable) );
+				}	
+				
+				try 
+				{
+					var rootFeature:Feature = kml.feature;
+					
+				
+					if (!this.featureRecords)
+					{
+						this.featureRecords = new ArrayCollection();
+					}
+					
+					
+					
+					
+					
+						var infoData:Object = processFeature(rootFeature);
+						if (canContainFeatures(rootFeature)) {
+							
+							infoData.children = new ArrayCollection(getChildrenFeatureData(Container(rootFeature)).source); // childrenFeatures.concat(getChildrenFeatures(Container(feature)));
+							
+						} 
+						
+					
+					featureRecords.addItem(infoData);
+					
+					
+					
+					
+					
+					
+					clearMessage();
+				}
+				catch (error:Error)
+				{
+					showMessage("A problem occured while parsing the KML feed. " + error.message, false);
+				}
+			}
+			
+			
+			public function getChildrenFeatures(container:Container):Array {
+				var childrenFeatures:Array = new Array();
+				for (var i:Number = 0; i < container.features.length; i++) {
+					var feature:Feature = container.features[i];
+					var childObj:Object = new Object();
+
+					childObj.styleUrl = feature.styleUrl;
+					childObj.style = feature.style;
+					childObj.name = feature.name;
+					childObj.description = feature.description;
+					if (feature is Placemark) {
+						var placemark:Placemark = Placemark(feature)
+						childObj.geometry = placemark.geometry;
+					}
+					/*if (childObj.name == null) {
+						childObj.name = getAlternateName(feature);
+					}*/
+					if (canContainFeatures(feature)) {
+						//childObj.children = getChildrenFeatures(Container(feature));
+						childrenFeatures = childrenFeatures.concat(getChildrenFeatures(Container(feature)));
+					} else {
+						//associateWithMapObject(childObj, feature);
+					}
+					childrenFeatures.push(childObj);
+				}
+				return childrenFeatures;
+			}
+			
+			public function canContainFeatures(feature:Feature):Boolean {
+				return (feature is Container);
+			}
+			
+			private function processFeature(feature:Feature):Object
+			{
+				var geometry:ArrayCollection;
+				var style:Style;
+				var icon:String = widgetIcon;
+				var iconStyle:Style = null;
+				var label:String = "";
+				var content:String = "";
+				var point:MapPoint; 
+				var icon_src:String = "";
+				var children:ArrayCollection;
+				var visible:Boolean = true;
+				try
+				{
+				
+				if (feature is Placemark) {
+					var placemark:Placemark = Placemark(feature)
+					geometry = placemark.geometry;
+					if (geometry)
+					{
+					point = getGeomCenter(geometry[0]);
+					lastCenter = point;
+					}
+				}
+				
+				
+				if (feature.name)
+					label = feature.name; 
+				if (!label)
+					label = widgetTitle; 
+				
+				if (feature.description)
+					content = "description: " + feature.description;
+				
+				visible = feature.visibility;
+				
+				
+				
+				if (feature is Document)
+				{
+					if (!styles)
+					{
+						styles = Document(feature).styles; //new ArrayCollection(Document(feature).styles);
+					}
+					else
+					{
+						styles = styles.concat(Document(feature).styles); //styles.addAll(new ArrayCollection(Document(feature).styles));
+					}
+					
+					if (!styleMaps)
+					{
+						styleMaps = Document(feature).styleMap; //new ArrayCollection(Document(feature).styleMap);
+					}
+					else
+					{
+						styleMaps = styleMaps.concat(Document(feature).styleMap); //.addAll(new ArrayCollection(Document(feature).styleMap));
+					}
+				}
+				/*
+				if (feature.style)
+				{
+					if (!styles)
+					{
+						styles = new ArrayCollection([feature.style]);
+					}
+					else
+					{
+						styles.addItem(feature.style);
+					}	
+				}*/
+				if (geometry)
+				{
+						
+					if (feature.styleUrl)
+					{
+						style = searchStyles(feature.styleUrl);
+						if ((style) && (style.iconStyle))
+						{
+							if (proxyUrl)
+							{
+								icon_src = proxyUrl +"?url=" + style.iconStyle.icon.href;
+							}
+						}
+						
+					}
+					else
+					{
+						if (feature.style)
+						{
+							style = feature.style;
+							if ((style) && (style.iconStyle))
+							{
+								if (proxyUrl)
+								{
+									icon_src = proxyUrl +"?url=" + style.iconStyle.icon.href;
+								}
+							}
+						}
+					}
+				}
+				 
+				
+				if (icon_src != "") 
+					icon = icon_src;   
+				
+				
+				var infoData:Object = 
+					{
+						//icon:  icon,  //need to edit this out or figure out how to refernce the icon in the tree.
+						title: label,
+						label: label,
+						content: content,  
+						point: point,
+						geometry: geometry,
+						visible : visible
+						
+					}; 
+				
+				var graphic:ArrayCollection = new ArrayCollection();
+				if (geometry)
+				{
+					
+					var geo:Geometry;
+					for each (geo in geometry)
+					{
+						var gra:Graphic = new Graphic(geo);
+					
+					gra.addEventListener(MouseEvent.CLICK, mouseOverGraphic)
+					gra.attributes = infoData;
+					switch (gra.geometry.type)
+					{
+						case Geometry.POLYLINE:
+						{
+							if (style)
+								gra.symbol = symbolStyleLine(style);
+							else
+								gra.symbol = graphicLineSym;
+							break;
+						}
+							
+						case Geometry.POLYGON:
+						{
+							if (style)
+								gra.symbol = symbolStyleFill(style);
+								
+							else
+								gra.symbol = graphicPolySym;
+							break;
+						}
+						case Geometry.MAPPOINT:
+						{
+							graphicPointSym = new PictureMarkerSymbol(icon,15,15);
+							gra.symbol = graphicPointSym;
+						}
+					}
+					if (visible==true)
+					{
+						graphicsLayer.add(gra);
+					}
+					graphic.addItem(gra);
+					}
+					
+				}
+ 				infoData.graphic = graphic;
+				
+				if (!point)
+				{
+					point = lastCenter;
+				}
+				return infoData;
+				}
+				catch (error:Error)
+				{
+					showMessage("A problem occured while parsing the KML feed. " + error.message, false);
+					
+				}
+				return null;
+			}
+		 private function getChildrenFeatureData(container:Container):ArrayCollection
+			{
+				var features:ArrayCollection = new ArrayCollection();
+				try
+				{
+				for (var i:Number = 0; i < container.features.length; i++) {
+					var feature:Feature = container.features[i];
+					if (feature is NetworkLink) {
+						networkLinks.addItem(NetworkLink(feature));
+					}
+					else
+					{
+					var infoData:Object = processFeature(feature);
+					if (canContainFeatures(feature)) {
+						
+						infoData.children = new ArrayCollection(getChildrenFeatureData(Container(feature)).source); // childrenFeatures.concat(getChildrenFeatures(Container(feature)));
+					
+						} 
+					features.addItem(infoData);
+					}
+					
+				}
+				return features;
+				}
+				catch (error:Error)
+				{
+					showMessage("A problem occured while parsing the KML feed. " + error.message, false);
+					
+				}
+				return null;
+			}	
+				
+				
+			
+			
+			private function createFeatureData(container:Container):ArrayCollection
+			{
+				
+				graphicsLayer.clear();
+				
+				var features:ArrayCollection = new ArrayCollection();
+				var feature:Feature = container;
+				var kml:Namespace = Namespaces.KML_NS;
+				
+		
+				
+				if (feature is NetworkLink) {
+					networkLinks.addItem(NetworkLink(feature));
+				}
+				else
+				{
+					var infoData:Object = processFeature(feature);
+					if (canContainFeatures(feature)) {
+						
+						infoData.children = new ArrayCollection(getChildrenFeatureData(Container(feature)).source); // childrenFeatures.concat(getChildrenFeatures(Container(feature)));
+						
+					} 
+					features.addItem(infoData);
+				}
+				
+				
+				
+				return features;
+			}
+			
+			
+			private function searchStyleMaps(styleSearch:String) :String
+			{
+				
+				for (var i:Number = 0; i < styleMaps.length; i++)                    
+				{ 
+					var styleMap:StyleMap = StyleMap(styleMaps[i]);
+					if (styleSearch == styleMap.id)
+					{
+						for (var j:Number = 0; j < styleMap.pairs.length; j++)                    
+						{ 
+							if (styleMap.pairs[j].key == "normal")
+							{
+								styleSearch = styleMap.pairs[j].styleUrl;
+								if (styleSearch.charAt(0) == '#')
+								{
+									return styleSearch.substring(1,styleSearch.length);
+									
+								}
+								else
+								{
+									return null;
+								}
+							}
+						}
+					}
+				}	
+				return styleSearch;
+			}
+			
+			
+			private function searchStyles(styleUrl:String):Style
+			{
+				var styleSearch:String;
+				if(!styles)
+					return null;
+				if (styleUrl.charAt(0) == "#")
+				{
+					styleSearch = styleUrl.substring(1,styleUrl.length);
+				}
+				else
+				{
+					return null;
+				}
+				
+				styleSearch = searchStyleMaps(styleSearch);
+				
+				if (styleSearch == null)
+				{
+					return null;
+				}
+				
+				for (var i:Number = 0; i < styles.length; i++)                    
+				{ 
+					var style:Style = Style(styles[i]);
+					if (style.id == styleSearch)
+					{
+						return style;
+					}
+					
+				}	
+				return null;	
+			}
+			
+			private function symbolStyleLine(style:Style):SimpleLineSymbol
+			{
+				var symbolStyle:SimpleLineSymbol = new SimpleLineSymbol();
+				symbolStyle.style = SimpleLineSymbol.STYLE_SOLID;
+				if ((style.lineStyle) && (style.lineStyle.color))
+				{
+				symbolStyle.color = style.lineStyle.color;
+				}
+				else
+				{
+					symbolStyle.color = parseInt("0xffffff");	
+				}
+				
+				
+				if ((style.lineStyle) && (style.lineStyle.width))
+				{
+					symbolStyle.width = style.lineStyle.width; 
+				}
+				
+				return symbolStyle;
+			}
+			
+			private function symbolStyleFill(style:Style):SimpleFillSymbol
+			{
+				var symbolStyle:SimpleFillSymbol = new SimpleFillSymbol();
+				if (style.polyStyle.fill)
+				{
+					symbolStyle.style = SimpleFillSymbol.STYLE_SOLID;
+				}
+				else
+				{
+					symbolStyle.style = SimpleFillSymbol.STYLE_NULL;	
+				}
+				
+					if ((style.polyStyle) && (style.polyStyle.color))
+					{
+						symbolStyle.alpha = style.polyStyle.alpha;
+						symbolStyle.color = style.polyStyle.color;	
+					}
+
+				symbolStyle.outline = symbolStyleLine(style);
+				return symbolStyle;
+				
+			}
+			
+			// JMH adding support for caching - what about lines and fills too?
+			private function symbolStyleMarker(icon:String, icon_style:Style):PictureMarkerSymbol
+			{
+				var rtrn:PictureMarkerSymbol = null;
+				
+				if (icon_style == null) {
+					// no choice but to create a new one
+					// JMH was (icon,15,15) - what if leave them off?
+					rtrn = new PictureMarkerSymbol(icon);
+				} else {
+					rtrn = markerSymbolCache[icon_style];
+					if (rtrn == null) {						
+						// JMH was (icon,15,15) - what if leave them off? comes in full scale but scaling after creation isn't working
+						var scale:Number = 32;	// cheating: how can you get icon's native size?
+						var iconScale:Number = icon_style.iconStyle.scale; 
+						if ((iconScale != 0) && (iconScale != 1.0)) {
+							scale = scale * iconScale;
+						}
+						rtrn = new PictureMarkerSymbol(icon, scale, scale);
+						markerSymbolCache[icon_style] = rtrn;
+					}
+				}
+				return(rtrn);
+			}
+			private var markerSymbolCache:Dictionary = new Dictionary();
+			
+			
+			//create record data
+			
+		    
+			// get a feed item icon or return the default
+			private function getFeedItemSymbol():String
+			{
+               return "";			
+			}
+			//get geom center
+			private function getGeomCenter(geom:Geometry):MapPoint
+			{
+				var pt:MapPoint;
+	           	switch (geom.type)
+	           	{
+	               case Geometry.MAPPOINT:
+	               {
+	                    pt = geom as MapPoint;
+	                    break;
+	               }
+	               
+	               case Geometry.POLYLINE:
+	               {
+	               		var pl:Polyline = geom as Polyline;
+	               		var pathCount:Number = pl.paths.length;
+	               		var pathIndex:int = int(pathCount / 2) - 1;
+						if (pathIndex < 0)
+						{
+							pathIndex = 0;
+						}
+	               		var midPath:Array = pl.paths[pathIndex];
+	               		var ptCount:Number = midPath.length;
+	               		var ptIndex:int = int(ptCount / 2) - 1;
+	               		pt = pl.getPoint(pathIndex, ptIndex);
+	               			
+	               		//pt = pl.extent.center;
+	                    break;
+	               }
+	               
+	               case Geometry.POLYGON:
+	               {
+	                    var poly:Polygon = geom as Polygon;
+	               		pt = poly.extent.center;
+	                    break;
+	               }
+	            }
+				return pt;
+			}			
+						
+			//mouse over graphic
+			private function mouseOverGraphic(event:MouseEvent):void
+			{
+				var gra:Graphic = event.currentTarget as Graphic;
+				var infoData:Object = gra.attributes;
+				this.showInfoWindow(infoData);
+			}
+						
+			private function mouseOverRecord(event:ListEvent):void
+			{
+				var infoData:Object = event.currentTarget.infoData;
+				clearTimeout(hitimer);
+				hitimer = setTimeout(showHighlight, 800, [infoData]);
+			}
+						
+			private function mouseOutRecord():void
+			{
+				clearTimeout(hitimer);
+				this.showInfoWindow(null);
+			}
+						
+			private function toggleVisibility(infoData:Object, visible:Boolean):void
+			{
+				if (infoData.visible != visible)
+				{
+					if (infoData.graphic)
+					{
+						var  gra:Graphic;
+					
+						
+							for each (gra in infoData.graphic)
+							{
+					if (visible)
+					{
+						graphicsLayer.add(gra);
+					}
+					else
+					{
+						graphicsLayer.remove(gra);
+					}
+					}
+					}
+					infoData.visible = visible;
+				}
+				if (infoData.children)
+				{
+				for (var i:Number = 0; i < infoData.children.length; i++) {
+					toggleVisibility(infoData.children[i],visible);
+				}
+				}
+			}
+			
+			private function locateRecord(event:ListEvent):void
+			{
+				var infoData:Object = event.currentTarget.selectedItem;
+				
+				
+				var pt:MapPoint = infoData.point;
+				if (pt)
+				{
+				if (map.scale > zoomScale)
+					map.scale = zoomScale;
+				map.centerAt(pt);
+				}
+			}	
+			
+			private function changeVisibility(event:Event):void
+			{
+				var infoData:Object = event.target.data; 
+				toggleVisibility(infoData, !infoData.visible);
+				
+			}	
+			
+			private function showHighlight(params:Array):void
+			{
+				var infoData:Object = params[0];
+				/*var pt:MapPoint = infoData.point;
+				//if (!map.extent.contains(pt))
+				//	map.centerAt(pt);
+				this.showInfoWindow(params[0]);*/
+			}			
+			
+			private function showMessage(msg:String, swfVisible:Boolean):void
+			{
+				txtMessage.htmlText = msg;
+				swfMessage.visible = swfVisible;
+				msgVisible = true;
+			}			
+			
+			private function clearMessage():void
+			{
+				msgVisible = false;
+			}			
+				
+			private function widgetClosedHandler(event:Event):void
+			{
+				graphicsLayer.visible = false;
+				stopWidgetTimer();
+				this.showInfoWindow(null);
+			}			
+			
+			private function widgetOpenedHandler(event:Event):void
+			{
+				graphicsLayer.visible = true;
+				startWidgetTimer();
+			}		
+			
+			// JMH - factor out proxy URL logic so it can be brought in or out
+			private function formUrlWithProxy(realUrl:String):String
+			{
+				var rtrn:String = "";
+				var prefix:String = "?url=";	// for PHP proxy
+				//var prefix:String = "?";		// for ASHX proxy
+				var useProxy:Boolean = false;
+				// for debugging, comment out this line to go around the proxy		
+				//				if (proxyUrl) useProxy = true;
+				// JMH - using the proxy messes with browser cache so that icons are grabbed for every placemark
+				//		even with PictureMarkerSymbol objects being cached - so not sure where the icon grab is occurring
+				if (useProxy) 
+				{
+					rtrn = proxyUrl + prefix + realUrl; 
+				}
+				else
+				{
+					rtrn = realUrl;
+				}
+				return(rtrn);
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<!-- HTTP SERVICE -->
+	<!--<mx:HTTPService	id="kmlService" 
+					result="{loadXML(event)}" 
+					fault="{faultHandler(event)}" 
+					resultFormat="e4x"/>-->
+	
+	<WidgetTemplate id="wTemplate" widgetClosed="widgetClosedHandler(event)" widgetOpened="widgetOpenedHandler(event)">
+		<mx:ViewStack id="viewStack" width="100%" height="100%" creationPolicy="all">
+			<mx:VBox width="100%" height="100%" verticalGap="1">
+				<mx:HBox id="boxSrc" visible="{srcVisible}" includeInLayout="{srcVisible}" width="100%">
+					<mx:TextInput id="kmlSrc" text=""/>
+					<mx:Button label="Load" click="loadKmlSrc(event)"/>
+				</mx:HBox>
+				<mx:HBox id="boxMessage" visible="{msgVisible}" includeInLayout="{msgVisible}" width="100%">
+					<mx:SWFLoader id="swfMessage" source="com/esri/solutions/flexviewer/assets/flash/loader.swf" visible="false" />
+					<mx:Text id="txtMessage" text="" styleName="WidgetText" width="90%"/>
+				</mx:HBox>
+				<!-- itemDoubleClick="doubleClickRecord(event)" itemClick="doubleClickRecord(event)"-->
+				<mx:Tree id="wTree" 
+						 width="100%" 
+						 rollOverColor="0x333333"
+						 selectionColor="0x444444"
+						 textRollOverColor="0xFFFFFF"
+						 textSelectedColor="0xFFFFFF"
+						 itemRenderer="com.esri.solutions.flexviewer.widgets.kmlparser.KMLTreeItemRenderer" 
+						 itemClick="locateRecord(event)" itemFocusIn="mouseOverRecord(event)" 
+						 horizontalScrollPolicy="on"
+						 itemFocusOut="mouseOutRecord()"/>
+				<!--<mx:Repeater id="wRepeater">
+					<widgets:RecordData infoData="{wRepeater.currentItem}" mouseOver="mouseOverRecord(event)" mouseOut="mouseOutRecord()" click="clickRecord(event)"/>
+				</mx:Repeater>-->
+			</mx:VBox>
+		</mx:ViewStack>
+	</WidgetTemplate>
+	
+</BaseWidget>
